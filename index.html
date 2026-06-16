@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 简历优化器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, "Microsoft YaHei", sans-serif; background: #f0f2f5; color: #333; min-height: 100vh; }
+        .container { max-width: 900px; margin: 0 auto; padding: 24px; }
+        h1 { text-align: center; margin-bottom: 32px; font-size: 28px; color: #1a1a1a; }
+        h1 span { color: #4f46e5; }
+
+        /* Tab 切换 */
+        .tabs { display: flex; gap: 0; margin-bottom: 24px; border-radius: 10px; overflow: hidden; border: 2px solid #4f46e5; }
+        .tab { flex: 1; padding: 12px; text-align: center; cursor: pointer; font-size: 15px; font-weight: 600; transition: all .2s; background: #fff; color: #4f46e5; }
+        .tab.active { background: #4f46e5; color: #fff; }
+
+        /* 输入区域 */
+        .input-section { background: #fff; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,.06); margin-bottom: 24px; }
+        textarea { width: 100%; height: 200px; border: 2px solid #e5e7eb; border-radius: 8px; padding: 14px; font-size: 14px; resize: vertical; outline: none; transition: border .2s; font-family: inherit; }
+        textarea:focus { border-color: #4f46e5; }
+
+        /* 文件上传区 */
+        .upload-area { border: 2px dashed #d1d5db; border-radius: 12px; padding: 48px 24px; text-align: center; cursor: pointer; transition: all .2s; position: relative; }
+        .upload-area:hover, .upload-area.dragover { border-color: #4f46e5; background: #f5f3ff; }
+        .upload-area input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+        .upload-icon { font-size: 48px; margin-bottom: 12px; }
+        .upload-text { font-size: 15px; color: #6b7280; }
+        .upload-text strong { color: #4f46e5; }
+        .file-name { margin-top: 12px; font-size: 14px; color: #4f46e5; font-weight: 600; }
+
+        /* 按钮 */
+        .btn { display: block; width: 100%; padding: 14px; border: none; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer; transition: all .2s; margin-top: 16px; }
+        .btn-primary { background: #4f46e5; color: #fff; }
+        .btn-primary:hover { background: #4338ca; }
+        .btn-primary:disabled { background: #a5b4fc; cursor: not-allowed; }
+
+        /* Loading */
+        .loading { display: none; text-align: center; padding: 32px; }
+        .loading.show { display: block; }
+        .spinner { display: inline-block; width: 40px; height: 40px; border: 4px solid #e5e7eb; border-top-color: #4f46e5; border-radius: 50%; animation: spin .8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading p { margin-top: 12px; color: #6b7280; font-size: 14px; }
+
+        /* 结果区域 */
+        .result { display: none; background: #fff; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,.06); margin-bottom: 24px; }
+        .result.show { display: block; }
+        .result h2 { font-size: 18px; margin-bottom: 16px; color: #1a1a1a; border-bottom: 2px solid #4f46e5; padding-bottom: 8px; }
+        .result-section { margin-bottom: 20px; }
+        .result-section h3 { font-size: 15px; color: #4f46e5; margin-bottom: 8px; }
+        .result-section p, .result-section pre { font-size: 14px; line-height: 1.8; color: #374151; }
+        .result-section pre { white-space: pre-wrap; background: #f9fafb; padding: 14px; border-radius: 8px; border: 1px solid #e5e7eb; }
+        .suggestions li { margin-bottom: 6px; font-size: 14px; line-height: 1.6; }
+        .suggestions { padding-left: 20px; }
+
+        /* 历史列表 */
+        .history-item { background: #fff; border-radius: 10px; padding: 16px 20px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,.05); cursor: pointer; transition: all .2s; display: flex; justify-content: space-between; align-items: center; }
+        .history-item:hover { box-shadow: 0 4px 12px rgba(0,0,0,.1); transform: translateY(-1px); }
+        .history-item .info { flex: 1; }
+        .history-item .time { font-size: 12px; color: #9ca3af; }
+        .history-item .preview { font-size: 14px; color: #6b7280; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 600px; }
+        .delete-btn { background: #fee2e2; color: #dc2626; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all .2s; flex-shrink: 0; margin-left: 12px; }
+        .delete-btn:hover { background: #dc2626; color: #fff; }
+        .empty { text-align: center; padding: 48px; color: #9ca3af; font-size: 15px; }
+
+        /* 错误提示 */
+        .error-msg { background: #fef2f2; color: #dc2626; padding: 12px 16px; border-radius: 8px; font-size: 14px; margin-bottom: 16px; display: none; }
+        .error-msg.show { display: block; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🤖 <span>AI</span> 简历优化器</h1>
+
+    <!-- Tab -->
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('text')">📝 粘贴文本</div>
+        <div class="tab" onclick="switchTab('file')">📁 上传文件</div>
+        <div class="tab" onclick="switchTab('history')">📋 历史记录</div>
+    </div>
+
+    <div class="error-msg" id="errorMsg"></div>
+
+    <!-- 文本输入 -->
+    <div id="panel-text" class="input-section">
+        <textarea id="resumeText" placeholder="在此粘贴你的简历文本内容..."></textarea>
+        <button class="btn btn-primary" id="btnText" onclick="submitText()">🚀 开始优化</button>
+    </div>
+
+    <!-- 文件上传 -->
+    <div id="panel-file" class="input-section" style="display:none">
+        <div class="upload-area" id="dropZone">
+            <input type="file" id="fileInput" accept=".pdf,.docx" onchange="onFileSelect(event)">
+            <div class="upload-icon">📄</div>
+            <div class="upload-text">点击选择或拖拽文件到此处<br><strong>仅支持 PDF 和 Word (.docx)</strong></div>
+            <div class="file-name" id="fileName"></div>
+        </div>
+        <button class="btn btn-primary" id="btnFile" onclick="submitFile()" disabled>🚀 上传并优化</button>
+    </div>
+
+    <!-- 历史 -->
+    <div id="panel-history" style="display:none">
+        <div id="historyList"></div>
+    </div>
+
+    <!-- Loading -->
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <p>AI 正在深度分析你的简历，请稍候（约 15-30 秒）...</p>
+    </div>
+
+    <!-- 结果 -->
+    <div class="result" id="result">
+        <h2>✅ 优化结果</h2>
+        <div class="result-section">
+            <h3>🔍 问题分析</h3>
+            <p id="resAnalysis"></p>
+        </div>
+        <div class="result-section">
+            <h3>💡 优化建议</h3>
+            <ul class="suggestions" id="resSuggestions"></ul>
+        </div>
+        <div class="result-section">
+            <h3>📝 优化后的简历</h3>
+            <pre id="resOptimized"></pre>
+        </div>
+    </div>
+
+    <!-- 详情 -->
+    <div class="result" id="detail">
+        <h2>📋 记录详情 <span style="float:right;cursor:pointer;font-size:14px;color:#6b7280" onclick="closeDetail()">✕ 关闭</span></h2>
+        <div class="result-section">
+            <h3>🔍 问题分析</h3>
+            <p id="detAnalysis"></p>
+        </div>
+        <div class="result-section">
+            <h3>💡 优化建议</h3>
+            <ul class="suggestions" id="detSuggestions"></ul>
+        </div>
+        <div class="result-section">
+            <h3>📝 优化后的简历</h3>
+            <pre id="detOptimized"></pre>
+        </div>
+        <div class="result-section">
+            <h3>📄 原始简历</h3>
+            <pre id="detOriginal"></pre>
+        </div>
+    </div>
+</div>
+
+<script>
+const API = 'http://localhost:8000';
+
+// Tab 切换
+function switchTab(name) {
+    document.querySelectorAll('.tab').forEach((t, i) => {
+        t.classList.toggle('active', ['text','file','history'][i] === name);
+    });
+    document.getElementById('panel-text').style.display = name === 'text' ? '' : 'none';
+    document.getElementById('panel-file').style.display = name === 'file' ? '' : 'none';
+    document.getElementById('panel-history').style.display = name === 'history' ? '' : 'none';
+    hide('result'); hide('detail'); hide('errorMsg');
+    if (name === 'history') loadHistory();
+}
+
+// 文件选择
+function onFileSelect(e) {
+    const file = e.target.files[0];
+    if (file) {
+        document.getElementById('fileName').textContent = '📎 ' + file.name;
+        document.getElementById('btnFile').disabled = false;
+    }
+}
+
+// 拖拽
+const dz = document.getElementById('dropZone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file) {
+        document.getElementById('fileInput').files = e.dataTransfer.files;
+        document.getElementById('fileName').textContent = '📎 ' + file.name;
+        document.getElementById('btnFile').disabled = false;
+    }
+});
+
+// 提交文本
+async function submitText() {
+    const text = document.getElementById('resumeText').value.trim();
+    if (!text) return showError('请输入简历内容');
+    setLoading(true);
+    try {
+        const res = await fetch(API + '/optimize', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({content: text})
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || '请求失败');
+        showResult(data);
+    } catch (e) { showError(e.message); }
+    setLoading(false);
+}
+
+// 提交文件
+async function submitFile() {
+    const file = document.getElementById('fileInput').files[0];
+    if (!file) return showError('请选择文件');
+    setLoading(true);
+    try {
+        const form = new FormData();
+        form.append('file', file);
+        const res = await fetch(API + '/upload', { method: 'POST', body: form });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || '请求失败');
+        showResult(data);
+    } catch (e) { showError(e.message); }
+    setLoading(false);
+}
+
+// 显示结果
+function showResult(data) {
+    hide('detail');
+    const el = document.getElementById('result');
+    el.classList.add('show');
+    document.getElementById('resAnalysis').textContent = data.analysis || '无';
+    document.getElementById('resSuggestions').innerHTML = (data.suggestions||[]).map(s => `<li>${esc(s)}</li>`).join('');
+    document.getElementById('resOptimized').textContent = data.optimized_content || '无';
+    el.scrollIntoView({behavior:'smooth'});
+}
+
+// 加载历史
+async function loadHistory() {
+    try {
+        const res = await fetch(API + '/history');
+        const list = await res.json();
+        const container = document.getElementById('historyList');
+        if (!list.length) { container.innerHTML = '<div class="empty">暂无优化记录</div>'; return; }
+        container.innerHTML = list.map(r => `
+            <div class="history-item" onclick="viewDetail(${r.id})">
+                <div class="info">
+                    <div class="time">${new Date(r.created_at).toLocaleString('zh-CN')}</div>
+                    <div class="preview">${esc((r.original_content||'').slice(0,80))}</div>
+                </div>
+                <button class="delete-btn" onclick="event.stopPropagation();deleteRecord(${r.id})">删除</button>
+            </div>
+        `).join('');
+    } catch (e) { showError('加载历史失败: ' + e.message); }
+}
+
+// 查看详情
+async function viewDetail(id) {
+    try {
+        const res = await fetch(API + '/history/' + id);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail);
+        hide('result');
+        const el = document.getElementById('detail');
+        el.classList.add('show');
+        document.getElementById('detAnalysis').textContent = data.analysis || '无';
+        document.getElementById('detSuggestions').innerHTML = (data.suggestions||[]).map(s => `<li>${esc(s)}</li>`).join('');
+        document.getElementById('detOptimized').textContent = data.optimized_content || '无';
+        document.getElementById('detOriginal').textContent = data.original_content || '无';
+        el.scrollIntoView({behavior:'smooth'});
+    } catch (e) { showError(e.message); }
+}
+
+function closeDetail() { hide('detail'); }
+
+// 删除
+async function deleteRecord(id) {
+    if (!confirm('确定删除这条记录吗？')) return;
+    try {
+        await fetch(API + '/history/' + id, {method:'DELETE'});
+        loadHistory();
+    } catch (e) { showError('删除失败: ' + e.message); }
+}
+
+// 工具
+function setLoading(v) {
+    document.getElementById('loading').classList.toggle('show', v);
+    document.getElementById('btnText').disabled = v;
+    document.getElementById('btnFile').disabled = v;
+    if (v) { hide('result'); hide('detail'); hide('errorMsg'); }
+}
+function showError(msg) { const el = document.getElementById('errorMsg'); el.textContent = '❌ ' + msg; el.classList.add('show'); }
+function hide(id) { document.getElementById(id).classList.remove('show'); }
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+</script>
+</body>
+</html>

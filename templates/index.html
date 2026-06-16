@@ -1,0 +1,1396 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ResumeAI - AI 简历优化平台</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root,[data-theme="light"] {
+  --bg: #F0F2F5; --card: #FFFFFF; --card-border: #E5E7EB;
+  --accent: #6366F1; --accent-hover: #4F46E5;
+  --text: #1F2937; --text-muted: #6B7280; --text-dim: #9CA3AF;
+  --green: #10B981; --red: #EF4444; --orange: #F59E0B; --blue: #3B82F6;
+  --input-bg: #F9FAFB; --input-focus: #fff; --compare-bg: #F9FAFB;
+  --copy-bg: #E5E7EB; --copy-hover: #D1D5DB;
+  --error-bg: #FEF2F2; --error-border: #FECACA; --error-text: #DC2626;
+  --skill-has-bg: #ECFDF5; --skill-has-border: #A7F3D0; --skill-has-text: #059669;
+  --skill-miss-bg: #FEF2F2; --skill-miss-border: #FECACA; --skill-miss-text: #DC2626;
+  --provider-card-bg: #F9FAFB; --provider-card-hover: rgba(99,102,241,.04); --provider-card-selected: rgba(99,102,241,.08);
+  --topbar-bg: rgba(255,255,255,.85); --topbar-border: #E5E7EB;
+}
+[data-theme="dark"] {
+  --bg: #111318; --card: #1A1D24; --card-border: #2A2D35;
+  --accent: #818CF8; --accent-hover: #6366F1;
+  --text: #E8EAED; --text-muted: #9CA3AF; --text-dim: #6B7280;
+  --green: #34D399; --red: #F87171; --orange: #FBBF24; --blue: #60A5FA;
+  --input-bg: #22252B; --input-focus: #282B32; --compare-bg: #22252B;
+  --copy-bg: #2A2D35; --copy-hover: #363940;
+  --error-bg: rgba(248,113,113,.1); --error-border: rgba(248,113,113,.25); --error-text: #F87171;
+  --skill-has-bg: rgba(52,211,153,.1); --skill-has-border: rgba(52,211,153,.3); --skill-has-text: #34D399;
+  --skill-miss-bg: rgba(248,113,113,.1); --skill-miss-border: rgba(248,113,113,.3); --skill-miss-text: #F87171;
+  --provider-card-bg: #22252B; --provider-card-hover: rgba(129,140,248,.06); --provider-card-selected: rgba(129,140,248,.12);
+  --topbar-bg: rgba(17,19,24,.88); --topbar-border: #2A2D35;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Inter','Microsoft YaHei',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; transition:background .3s,color .3s; }
+a { color:var(--accent); text-decoration:none; }
+
+/* ===== Animations ===== */
+@keyframes fadeIn { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+@keyframes fadeInUp { from{opacity:0;transform:translateY(40px)} to{opacity:1;transform:translateY(0)} }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+@keyframes spin { to{transform:rotate(360deg)} }
+@keyframes slideIn { from{opacity:0;transform:translateX(-20px)} to{opacity:1;transform:translateX(0)} }
+@keyframes ringProgress { from{stroke-dashoffset:283} }
+.fade-in { animation: fadeIn .6s ease both; }
+.fade-in-up { animation: fadeInUp .8s ease both; }
+
+/* ===== Top Bar ===== */
+.topbar { display:flex; justify-content:space-between; align-items:center; padding:16px 32px; border-bottom:1px solid var(--topbar-border); position:sticky; top:0; z-index:100; background:var(--topbar-bg); backdrop-filter:blur(12px); transition:background .3s,border-color .3s; }
+.topbar .logo { font-size:20px; font-weight:800; letter-spacing:-0.5px; color:var(--text); }
+.topbar .logo span { color:var(--accent); }
+.topbar .user-area { display:flex; align-items:center; gap:12px; }
+.topbar .username { color:var(--text-muted); font-size:14px; font-weight:500; }
+.topbar .avatar { width:32px; height:32px; border-radius:50%; background:var(--accent); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; color:#fff; }
+.btn-logout { background:transparent; color:var(--text-dim); border:1px solid var(--card-border); padding:6px 14px; border-radius:8px; cursor:pointer; font-size:13px; transition:all .2s; }
+.btn-logout:hover { color:var(--red); border-color:var(--red); }
+
+/* ===== Hero ===== */
+.hero { text-align:center; padding:80px 24px 48px; position:relative; overflow:hidden; }
+.hero::before { content:''; position:absolute; top:-50%; left:50%; transform:translateX(-50%); width:600px; height:600px; background:radial-gradient(circle, rgba(99,102,241,.1) 0%, transparent 70%); pointer-events:none; }
+.hero h1 { font-size:48px; font-weight:800; letter-spacing:-1px; line-height:1.2; margin-bottom:16px; background:linear-gradient(135deg,var(--text) 0%,var(--accent) 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.hero p { font-size:18px; color:var(--text-muted); max-width:500px; margin:0 auto 32px; line-height:1.6; }
+
+/* ===== Container ===== */
+.container { max-width:960px; margin:0 auto; padding:0 24px 60px; }
+
+/* ===== Tabs ===== */
+.tabs { display:flex; gap:0; margin-bottom:32px; border-radius:16px; overflow:hidden; border:1px solid var(--card-border); background:var(--card); box-shadow:0 1px 3px rgba(0,0,0,.06); transition:background .3s; }
+.tab { flex:1; padding:14px; text-align:center; cursor:pointer; font-size:15px; font-weight:600; transition:all .25s; color:var(--text-muted); }
+.tab.active { background:var(--accent); color:#fff; }
+.tab:hover:not(.active) { color:var(--text); background:rgba(99,102,241,.06); }
+
+/* ===== Input Section ===== */
+.input-section { background:var(--card); border:1px solid var(--card-border); border-radius:24px; padding:32px; margin-bottom:32px; box-shadow:0 1px 3px rgba(0,0,0,.06); transition:background .3s; }
+textarea { width:100%; height:280px; background:var(--input-bg); border:1px solid var(--card-border); border-radius:16px; padding:16px 20px; font-size:15px; color:var(--text); resize:vertical; outline:none; transition:border .2s,background .2s; font-family:inherit; line-height:1.7; }
+textarea:focus { border-color:var(--accent); background:var(--input-focus); }
+textarea::placeholder { color:var(--text-dim); }
+
+/* ===== Upload Area ===== */
+.upload-area { border:2px dashed var(--card-border); border-radius:20px; padding:60px 24px; text-align:center; cursor:pointer; transition:all .3s; position:relative; background:var(--input-bg); }
+.upload-area:hover, .upload-area.dragover { border-color:var(--accent); background:var(--provider-card-hover); }
+.upload-area input { position:absolute; inset:0; opacity:0; cursor:pointer; }
+.upload-icon { font-size:56px; margin-bottom:16px; }
+.upload-text { font-size:16px; color:var(--text-muted); line-height:1.8; }
+.upload-text strong { color:var(--accent); }
+.file-name { margin-top:16px; font-size:14px; color:var(--accent); font-weight:600; }
+
+/* ===== Buttons ===== */
+.btn { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; height:64px; border:none; border-radius:16px; font-size:17px; font-weight:700; cursor:pointer; transition:all .25s; margin-top:20px; }
+.btn-primary { background:linear-gradient(135deg,var(--accent),#818CF8); color:#fff; }
+.btn-primary:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(99,102,241,.3); }
+.btn-primary:disabled { opacity:.5; cursor:not-allowed; transform:none; box-shadow:none; }
+
+/* ===== Model Selector ===== */
+.model-selector { display:flex; align-items:center; gap:12px; margin-bottom:16px; }
+.model-selector label { font-size:14px; font-weight:600; color:var(--text-muted); white-space:nowrap; }
+.model-select { flex:1; background:var(--input-bg); border:1px solid var(--card-border); border-radius:12px; padding:10px 16px; font-size:14px; color:var(--text); outline:none; cursor:pointer; transition:border .2s,background .2s; font-family:inherit; appearance:none; -webkit-appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239CA3AF' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 12px center; }
+.model-select:focus { border-color:var(--accent); background:var(--input-focus); }
+.model-tag { display:inline-block; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:600; }
+.model-tag.active { background:var(--skill-has-bg); color:var(--skill-has-text); }
+.model-tag.inactive { background:var(--input-bg); color:var(--text-dim); }
+
+/* ===== Loading / Analysis Steps ===== */
+.analysis-box { display:none; background:var(--card); border:1px solid var(--card-border); border-radius:24px; padding:32px; margin-bottom:32px; }
+.analysis-box.show { display:block; animation:fadeIn .5s ease; }
+.analysis-title { font-size:16px; font-weight:700; margin-bottom:20px; color:var(--accent); }
+.step { display:flex; align-items:center; gap:12px; padding:10px 0; font-size:14px; color:var(--text-muted); opacity:0; transform:translateX(-20px); }
+.step.visible { opacity:1; transform:translateX(0); transition:all .4s ease; }
+.step.done { color:var(--green); }
+.step.active { color:var(--text); }
+.step .icon { width:20px; text-align:center; }
+.spinner-sm { display:inline-block; width:16px; height:16px; border:2px solid var(--card-border); border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite; }
+
+/* ===== Results ===== */
+.results { display:none; }
+.results.show { display:block; animation:fadeInUp .6s ease; }
+.result-grid { display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-bottom:32px; }
+@media(max-width:768px) { .result-grid { grid-template-columns:1fr; } }
+.result-card { background:var(--card); border:1px solid var(--card-border); border-radius:24px; padding:28px; transition:transform .2s; }
+.result-card:hover { transform:translateY(-4px); }
+.result-card.full { grid-column:1/-1; }
+.result-card h3 { font-size:16px; font-weight:700; margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+
+/* ===== ATS Score Ring ===== */
+.ats-ring-wrap { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px 0; }
+.ats-ring { position:relative; width:160px; height:160px; }
+.ats-ring svg { transform:rotate(-90deg); }
+.ats-ring circle { fill:none; stroke-width:10; }
+.ats-ring .bg { stroke:var(--card-border); }
+.ats-ring .fg { stroke-linecap:round; transition:stroke-dashoffset 1.5s ease; }
+.ats-ring .score-text { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+.ats-ring .score-num { font-size:48px; font-weight:800; }
+.ats-ring .score-label { font-size:12px; color:var(--text-dim); font-weight:600; letter-spacing:2px; margin-top:2px; }
+.ats-grade { margin-top:12px; font-size:14px; font-weight:600; padding:4px 16px; border-radius:20px; }
+
+/* ===== Job Match Bars ===== */
+.job-bar { margin-bottom:14px; }
+.job-bar .label { display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; color:var(--text-muted); }
+.job-bar .label span:last-child { font-weight:700; color:var(--text); }
+.job-bar .track { height:8px; background:var(--card-border); border-radius:4px; overflow:hidden; }
+.job-bar .fill { height:100%; border-radius:4px; transition:width 1.2s ease; }
+
+/* ===== Skills Tags ===== */
+.skills-wrap { display:flex; flex-wrap:wrap; gap:8px; }
+.skill-tag { padding:6px 14px; border-radius:20px; font-size:13px; font-weight:600; border:1px solid; }
+.skill-tag.has { color:var(--skill-has-text); border-color:var(--skill-has-border); background:var(--skill-has-bg); }
+.skill-tag.miss { color:var(--skill-miss-text); border-color:var(--skill-miss-border); background:var(--skill-miss-bg); }
+
+/* ===== Comparison ===== */
+.compare-wrap { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+@media(max-width:768px) { .compare-wrap { grid-template-columns:1fr; } }
+.compare-col { background:var(--compare-bg); border:1px solid var(--card-border); border-radius:16px; padding:20px; position:relative; }
+.compare-col h4 { font-size:13px; color:var(--text-dim); margin-bottom:12px; font-weight:600; }
+.compare-col pre { white-space:pre-wrap; font-size:13px; line-height:1.8; color:var(--text-muted); font-family:inherit; max-height:400px; overflow-y:auto; }
+.btn-copy { position:absolute; top:12px; right:12px; background:var(--copy-bg); color:var(--text-muted); border:none; padding:4px 12px; border-radius:6px; cursor:pointer; font-size:12px; transition:all .2s; }
+.btn-copy:hover { background:var(--accent); color:#fff; }
+
+/* ===== Suggestions ===== */
+.suggestion-list { list-style:none; padding:0; }
+.suggestion-list li { padding:10px 0; border-bottom:1px solid var(--card-border); font-size:14px; color:var(--text-muted); line-height:1.7; display:flex; gap:10px; }
+.suggestion-list li:last-child { border-bottom:none; }
+.suggestion-list li::before { content:'\1F4A1'; flex-shrink:0; }
+
+/* ===== History Grid ===== */
+.history-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:16px; }
+.history-card { background:var(--card); border:1px solid var(--card-border); border-radius:20px; padding:24px; cursor:pointer; transition:all .25s; position:relative; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+.history-card:hover { transform:translateY(-4px); border-color:var(--accent); box-shadow:0 8px 24px rgba(99,102,241,.12); }
+.history-card .h-title { font-size:15px; font-weight:600; margin-bottom:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--text); }
+.history-card .h-score { display:inline-block; font-size:13px; font-weight:700; padding:3px 10px; border-radius:12px; margin-bottom:8px; }
+.history-card .h-time { font-size:12px; color:var(--text-dim); }
+.history-card .h-del { position:absolute; top:12px; right:12px; background:transparent; border:none; color:var(--text-dim); cursor:pointer; font-size:16px; opacity:0; transition:opacity .2s; }
+.history-card:hover .h-del { opacity:1; }
+.history-card .h-del:hover { color:var(--red); }
+.empty { text-align:center; padding:60px 24px; color:var(--text-dim); font-size:15px; }
+
+/* ===== Error ===== */
+.error-msg { background:var(--error-bg); border:1px solid var(--error-border); color:var(--error-text); padding:12px 16px; border-radius:12px; font-size:14px; margin-bottom:16px; display:none; }
+.error-msg.show { display:block; animation:fadeIn .3s ease; }
+
+/* ===== Detail Modal ===== */
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:200; backdrop-filter:blur(4px); overflow-y:auto; padding:40px 24px; }
+.modal-overlay.show { display:block; animation:fadeIn .3s ease; }
+.modal { max-width:800px; margin:0 auto; background:var(--card); border:1px solid var(--card-border); border-radius:24px; padding:32px; position:relative; box-shadow:0 20px 60px rgba(0,0,0,.12); }
+.modal-close { position:absolute; top:16px; right:16px; background:var(--copy-bg); color:var(--text-muted); border:none; width:32px; height:32px; border-radius:50%; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; transition:all .2s; }
+.modal-close:hover { background:var(--red); color:#fff; }
+
+/* ===== Feature Panels ===== */
+.feature-tabs { display:flex; gap:0; margin-bottom:24px; border-radius:12px; overflow:hidden; border:1px solid var(--card-border); background:var(--card); }
+.feature-tab { flex:1; padding:12px 8px; text-align:center; cursor:pointer; font-size:13px; font-weight:600; transition:all .25s; color:var(--text-muted); }
+.feature-tab.active { background:var(--accent); color:#fff; }
+.feature-tab:hover:not(.active) { color:var(--text); background:rgba(99,102,241,.06); }
+.feature-panel { display:none; }
+.feature-panel.active { display:block; }
+.feature-card { background:var(--card); border:1px solid var(--card-border); border-radius:20px; padding:28px; margin-bottom:20px; }
+.feature-card h3 { font-size:16px; font-weight:700; margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+.feature-result { background:var(--input-bg); border:1px solid var(--card-border); border-radius:14px; padding:20px; margin-top:16px; white-space:pre-wrap; font-size:14px; line-height:1.8; color:var(--text); max-height:500px; overflow-y:auto; }
+.feature-result-loading { text-align:center; padding:40px; color:var(--text-dim); }
+.question-card { background:var(--input-bg); border:1px solid var(--card-border); border-radius:14px; padding:20px; margin-bottom:12px; }
+.question-header { display:flex; align-items:center; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
+.question-badge { padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+.badge-tech { background:rgba(99,102,241,.12); color:var(--accent); }
+.badge-behavior { background:rgba(16,185,129,.12); color:var(--green); }
+.badge-scenario { background:rgba(245,158,11,.12); color:var(--orange); }
+.badge-career { background:rgba(59,130,246,.12); color:var(--blue); }
+.badge-easy { background:rgba(16,185,129,.12); color:var(--green); }
+.badge-medium { background:rgba(245,158,11,.12); color:var(--orange); }
+.badge-hard { background:rgba(239,68,68,.12); color:var(--red); }
+.question-text { font-size:15px; font-weight:600; color:var(--text); margin-bottom:8px; }
+.question-answer { font-size:13px; color:var(--text-muted); line-height:1.7; padding:12px; background:var(--card); border-radius:10px; margin-top:8px; }
+.question-tips { font-size:12px; color:var(--accent); margin-top:8px; font-style:italic; }
+.gap-bar { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+.gap-bar .name { font-size:13px; color:var(--text-muted); width:120px; flex-shrink:0; }
+.gap-bar .track { flex:1; height:8px; background:var(--card-border); border-radius:4px; overflow:hidden; }
+.gap-bar .fill { height:100%; border-radius:4px; transition:width 1s ease; }
+.gap-tag { display:inline-block; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:600; margin:4px 4px 4px 0; }
+.gap-tag.has { background:var(--skill-has-bg); color:var(--skill-has-text); border:1px solid var(--skill-has-border); }
+.gap-tag.miss { background:var(--skill-miss-bg); color:var(--skill-miss-text); border:1px solid var(--skill-miss-border); }
+.ats-dim-card { display:flex; align-items:center; gap:16px; padding:14px; background:var(--input-bg); border:1px solid var(--card-border); border-radius:12px; margin-bottom:10px; }
+.ats-dim-icon { font-size:22px; width:36px; text-align:center; flex-shrink:0; }
+.ats-dim-info { flex:1; min-width:0; }
+.ats-dim-name { font-size:14px; font-weight:600; color:var(--text); margin-bottom:4px; }
+.ats-dim-issues { font-size:12px; color:var(--text-dim); line-height:1.6; }
+.ats-dim-score { font-size:20px; font-weight:800; width:48px; text-align:right; flex-shrink:0; }
+
+/* ===== Feature Modal ===== */
+.feat-modal { max-width:700px; }
+.feat-header { display:flex; align-items:center; gap:12px; margin-bottom:24px; padding-bottom:20px; border-bottom:1px solid var(--card-border); }
+.feat-header-icon { width:48px; height:48px; border-radius:14px; background:linear-gradient(135deg,var(--accent),#818CF8); display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; }
+.feat-header h2 { font-size:20px; font-weight:700; color:var(--text); }
+.feat-header p { font-size:13px; color:var(--text-dim); margin-top:2px; }
+
+/* ===== API Key Modal ===== */
+.ak-modal { max-width:520px; }
+.ak-header { display:flex; align-items:center; gap:12px; margin-bottom:28px; padding-bottom:20px; border-bottom:1px solid var(--card-border); }
+.ak-header-icon { width:48px; height:48px; border-radius:14px; background:linear-gradient(135deg,var(--accent),#818CF8); display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; }
+.ak-header h2 { font-size:20px; font-weight:700; color:var(--text); }
+.ak-header p { font-size:13px; color:var(--text-dim); margin-top:2px; }
+
+.ak-provider-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px; }
+.ak-provider-card { background:var(--provider-card-bg); border:2px solid var(--card-border); border-radius:14px; padding:14px; cursor:pointer; transition:all .2s; display:flex; align-items:center; gap:10px; }
+.ak-provider-card:hover { border-color:var(--accent); background:var(--provider-card-hover); }
+.ak-provider-card.selected { border-color:var(--accent); background:var(--provider-card-selected); }
+.ak-provider-card .ak-p-icon { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:800; flex-shrink:0; }
+.ak-provider-card .ak-p-name { font-size:14px; font-weight:600; color:var(--text); }
+.ak-provider-card .ak-p-desc { font-size:11px; color:var(--text-dim); }
+.ak-provider-card .ak-p-check { margin-left:auto; width:20px; height:20px; border-radius:50%; border:2px solid var(--card-border); display:flex; align-items:center; justify-content:center; font-size:12px; transition:all .2s; }
+.ak-provider-card.selected .ak-p-check { background:var(--accent); border-color:var(--accent); color:#fff; }
+
+.ak-form-group { margin-bottom:18px; }
+.ak-form-label { display:flex; align-items:center; gap:6px; font-size:13px; font-weight:600; color:var(--text-muted); margin-bottom:8px; }
+.ak-form-label .ak-required { color:var(--red); }
+.ak-form-label .ak-hint { font-weight:400; color:var(--text-dim); font-size:12px; margin-left:auto; }
+.ak-input { width:100%; background:var(--input-bg); border:1px solid var(--card-border); border-radius:12px; padding:12px 16px; font-size:14px; color:var(--text); outline:none; transition:border .2s,background .2s; font-family:inherit; }
+.ak-input:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(99,102,241,.12); background:var(--input-focus); }
+.ak-input::placeholder { color:var(--text-dim); }
+.ak-input-wrap { position:relative; }
+.ak-input-wrap .ak-toggle-vis { position:absolute; right:12px; top:50%; transform:translateY(-50%); background:transparent; border:none; color:var(--text-dim); cursor:pointer; font-size:14px; padding:4px; transition:color .2s; }
+.ak-input-wrap .ak-toggle-vis:hover { color:var(--text); }
+
+.ak-actions { display:flex; gap:12px; margin-top:24px; }
+.ak-actions .btn { flex:1; height:48px; border-radius:14px; font-size:15px; }
+.ak-btn-cancel { background:var(--copy-bg); color:var(--text-muted); border:none; cursor:pointer; font-weight:600; transition:all .2s; }
+.ak-btn-cancel:hover { background:var(--copy-hover); color:var(--text); }
+.ak-btn-test { background:transparent; color:var(--accent); border:1px solid var(--accent); cursor:pointer; font-weight:600; transition:all .2s; }
+.ak-btn-test:hover { background:rgba(99,102,241,.08); }
+.ak-btn-save { background:linear-gradient(135deg,var(--accent),#4F46E5); color:#fff; border:none; cursor:pointer; font-weight:700; transition:all .2s; }
+.ak-btn-save:hover { transform:translateY(-1px); box-shadow:0 4px 16px rgba(99,102,241,.3); }
+
+.ak-test-result { margin-top:12px; padding:10px 14px; border-radius:10px; font-size:13px; font-weight:500; display:none; }
+.ak-test-result.show { display:flex; align-items:center; gap:8px; animation:fadeIn .3s ease; }
+.ak-test-result.ok { background:var(--skill-has-bg); color:var(--skill-has-text); border:1px solid var(--skill-has-border); }
+.ak-test-result.fail { background:var(--skill-miss-bg); color:var(--skill-miss-text); border:1px solid var(--skill-miss-border); }
+
+.ak-spinner { display:inline-block; width:14px; height:14px; border:2px solid transparent; border-top-color:currentColor; border-radius:50%; animation:spin .6s linear infinite; }
+</style>
+</head>
+<body>
+<!-- Top Bar -->
+<div class="topbar">
+  <div class="logo">Resume<span>AI</span></div>
+  <div class="user-area">
+    <button onclick="toggleTheme()" id="themeBtn" style="width:36px;height:36px;border-radius:10px;border:1px solid var(--card-border);background:var(--card);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:all .2s;box-shadow:0 1px 3px rgba(0,0,0,.06)">🌙</button>
+    <div class="avatar" id="navAvatar">U</div>
+    <span class="username" id="navUsername">用户</span>
+    <button class="btn-logout" onclick="doLogout()">退出</button>
+  </div>
+</div>
+
+<!-- Hero -->
+<div class="hero fade-in">
+  <h1>让AI帮你获得更多面试机会</h1>
+  <p>上传简历，获得ATS评分、岗位匹配分析和AI优化建议</p>
+</div>
+
+<div class="container">
+  <!-- Error -->
+  <div class="error-msg" id="errorMsg"></div>
+
+  <!-- Tabs -->
+  <div class="tabs fade-in">
+    <div class="tab active" onclick="switchTab('text')">📝 粘贴文本</div>
+    <div class="tab" onclick="switchTab('file')">📁 上传文件</div>
+    <div class="tab" onclick="switchTab('features')">🚀 实用功能</div>
+    <div class="tab" onclick="switchTab('history')">📋 历史记录</div>
+    <div class="tab" onclick="switchTab('settings')">⚙️ 设置</div>
+  </div>
+
+  <!-- Text Input -->
+  <div id="panel-text" class="input-section fade-in">
+    <textarea id="resumeText" placeholder="把你的简历内容粘贴到这里..."></textarea>
+    <div class="model-selector">
+      <label>🤖 模型</label>
+      <select class="model-select" id="modelSelect"></select>
+    </div>
+    <button class="btn btn-primary" id="btnText" onclick="submitText()">🚀 开始优化</button>
+  </div>
+
+  <!-- File Upload -->
+  <div id="panel-file" class="input-section fade-in" style="display:none">
+    <div class="upload-area" id="dropZone">
+      <input type="file" id="fileInput" accept=".pdf,.docx,.txt" onchange="onFileSelect(event)">
+      <div class="upload-icon">📄</div>
+      <div class="upload-text">拖拽文件到这里<br>或 <strong>点击选择文件</strong><br><span style="font-size:13px;color:var(--text-dim)">支持 PDF / DOCX / TXT</span></div>
+      <div class="file-name" id="fileName"></div>
+    </div>
+    <div class="model-selector">
+      <label>🤖 模型</label>
+      <select class="model-select" id="modelSelectFile"></select>
+    </div>
+    <button class="btn btn-primary" id="btnFile" onclick="submitFile()" disabled>🚀 上传并优化</button>
+  </div>
+
+  <!-- Features Panel -->
+  <div id="panel-features" style="display:none">
+    <div class="feature-tabs" id="featureTabs">
+      <div class="feature-tab active" onclick="switchFeatureTab('cover-letter')">✉️ 求职信</div>
+      <div class="feature-tab" onclick="switchFeatureTab('interview-prep')">🎤 面试准备</div>
+      <div class="feature-tab" onclick="switchFeatureTab('skills-gap')">📊 技能差距</div>
+      <div class="feature-tab" onclick="switchFeatureTab('ats-check')">🔍 ATS检查</div>
+    </div>
+
+    <!-- Resume Selector -->
+    <div class="feature-card">
+      <h3>📋 选择简历</h3>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">从历史记录中选择一份简历来使用功能</p>
+      <select class="model-select" id="featureResumeSelect" onchange="onFeatureResumeChange()" style="width:100%">
+        <option value="">加载中...</option>
+      </select>
+      <div id="featureResumePreview" style="margin-top:12px;font-size:13px;color:var(--text-dim);max-height:60px;overflow:hidden;text-overflow:ellipsis"></div>
+    </div>
+
+    <!-- Cover Letter -->
+    <div class="feature-panel active" id="fp-cover-letter">
+      <div class="feature-card">
+        <h3>✉️ AI 求职信生成</h3>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;line-height:1.7">基于简历和目标岗位JD，AI为你量身定制一封专业的求职信</p>
+        <div class="ak-form-group">
+          <div class="ak-form-label">目标岗位 JD <span style="color:var(--text-dim);font-weight:400">(可选)</span></div>
+          <textarea id="clJdInput" style="height:100px;width:100%;background:var(--input-bg);border:1px solid var(--card-border);border-radius:12px;padding:12px 16px;font-size:14px;color:var(--text);resize:vertical;outline:none;font-family:inherit;line-height:1.7" placeholder="粘贴目标岗位的职位描述..."></textarea>
+        </div>
+        <div class="ak-form-group">
+          <div class="ak-form-label">公司名称 <span style="color:var(--text-dim);font-weight:400">(可选)</span></div>
+          <input type="text" class="ak-input" id="clCompanyInput" placeholder="如：小米科技">
+        </div>
+        <div class="ak-form-group">
+          <div class="ak-form-label">语气风格</div>
+          <select class="model-select" id="clToneSelect">
+            <option value="professional">专业正式</option>
+            <option value="casual">轻松自然</option>
+            <option value="enthusiastic">热情积极</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" id="btnCoverLetter" onclick="generateCoverLetter()">✉️ 生成求职信</button>
+        <div class="feature-result-loading" id="clLoading" style="display:none"><span class="spinner-sm"></span> AI 正在撰写求职信...</div>
+        <div class="feature-result" id="clResult" style="display:none"></div>
+        <button class="btn btn-primary" id="btnCopyCl" style="display:none;margin-top:12px;height:48px" onclick="copyFeatureResult('clResult')">📋 复制求职信</button>
+      </div>
+    </div>
+
+    <!-- Interview Prep -->
+    <div class="feature-panel" id="fp-interview-prep">
+      <div class="feature-card">
+        <h3>🎤 AI 面试准备</h3>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;line-height:1.7">根据简历和JD生成面试问题、参考答案和答题技巧</p>
+        <div class="ak-form-group">
+          <div class="ak-form-label">目标岗位 JD <span style="color:var(--text-dim);font-weight:400">(可选)</span></div>
+          <textarea id="ipJdInput" style="height:100px;width:100%;background:var(--input-bg);border:1px solid var(--card-border);border-radius:12px;padding:12px 16px;font-size:14px;color:var(--text);resize:vertical;outline:none;font-family:inherit;line-height:1.7" placeholder="粘贴目标岗位的职位描述..."></textarea>
+        </div>
+        <div class="ak-form-group">
+          <div class="ak-form-label">问题数量</div>
+          <select class="model-select" id="ipCountSelect">
+            <option value="5">5题（快速）</option>
+            <option value="10" selected>10题（标准）</option>
+            <option value="15">15题（全面）</option>
+            <option value="20">20题（深度）</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" id="btnInterviewPrep" onclick="generateInterviewPrep()">🎤 生成面试题</button>
+        <div class="feature-result-loading" id="ipLoading" style="display:none"><span class="spinner-sm"></span> AI 正在生成面试题...</div>
+        <div id="ipResult" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- Skills Gap -->
+    <div class="feature-panel" id="fp-skills-gap">
+      <div class="feature-card">
+        <h3>📊 技能差距分析</h3>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;line-height:1.7">对比简历和JD，分析技能匹配度并给出学习建议</p>
+        <div class="ak-form-group">
+          <div class="ak-form-label">目标岗位 JD <span class="ak-required">*</span></div>
+          <textarea id="sgJdInput" style="height:120px;width:100%;background:var(--input-bg);border:1px solid var(--card-border);border-radius:12px;padding:12px 16px;font-size:14px;color:var(--text);resize:vertical;outline:none;font-family:inherit;line-height:1.7" placeholder="必须粘贴目标岗位的职位描述..."></textarea>
+        </div>
+        <button class="btn btn-primary" id="btnSkillsGap" onclick="generateSkillsGap()">📊 分析技能差距</button>
+        <div class="feature-result-loading" id="sgLoading" style="display:none"><span class="spinner-sm"></span> AI 正在分析技能差距...</div>
+        <div id="sgResult" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- ATS Check -->
+    <div class="feature-panel" id="fp-ats-check">
+      <div class="feature-card">
+        <h3>🔍 ATS 格式检查</h3>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;line-height:1.7">检查简历是否能被ATS（简历筛选系统）正确解析和评分</p>
+        <button class="btn btn-primary" id="btnAtsCheck" onclick="generateAtsCheck()">🔍 开始检查</button>
+        <div class="feature-result-loading" id="acLoading" style="display:none"><span class="spinner-sm"></span> AI 正在检查ATS兼容性...</div>
+        <div id="acResult" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- History -->
+  <div id="panel-history" style="display:none">
+    <div class="history-grid" id="historyList"></div>
+  </div>
+
+  <!-- Settings -->
+  <div id="panel-settings" style="display:none">
+    <div class="input-section fade-in">
+      <h3 style="font-size:18px;font-weight:700;margin-bottom:20px;color:var(--accent)">🤖 模型 API Key 配置</h3>
+      <p style="font-size:14px;color:var(--text-muted);margin-bottom:24px;line-height:1.7">
+        配置你自己的 API Key 后，分析简历时将优先使用你的 Key。未配置的模型将使用系统默认 Key（如果有）。
+      </p>
+      <div id="apiKeyList"></div>
+      <button class="btn btn-primary" style="height:48px;margin-top:16px" onclick="showAddApiKey()">➕ 添加 API Key</button>
+    </div>
+  </div>
+
+  <!-- Analysis Progress -->
+  <div class="analysis-box" id="analysisBox">
+    <div class="analysis-title">🧠 AI 正在深度分析</div>
+    <div class="step" id="step1"><span class="icon">○</span> 正在解析简历内容</div>
+    <div class="step" id="step2"><span class="icon">○</span> 提取技能关键词</div>
+    <div class="step" id="step3"><span class="icon">○</span> 分析项目经历</div>
+    <div class="step" id="step4"><span class="icon">○</span> 计算 ATS 评分</div>
+    <div class="step" id="step5"><span class="icon">○</span> 匹配目标岗位</div>
+    <div class="step" id="step6"><span class="icon"><span class="spinner-sm"></span></span> 正在生成优化版本...</div>
+  </div>
+
+  <!-- Results -->
+  <div class="results" id="results">
+    <div class="result-grid">
+      <!-- ATS Score -->
+      <div class="result-card">
+        <h3>🎯 ATS 评分</h3>
+        <div class="ats-ring-wrap">
+          <div class="ats-ring">
+            <svg width="160" height="160"><circle class="bg" cx="80" cy="80" r="65"/><circle class="fg" id="atsCircle" cx="80" cy="80" r="65" stroke-dasharray="408" stroke-dashoffset="408"/></svg>
+            <div class="score-text">
+              <span class="score-num" id="atsNum">0</span>
+              <span class="score-label">ATS SCORE</span>
+            </div>
+          </div>
+          <div class="ats-grade" id="atsGrade"></div>
+        </div>
+      </div>
+
+      <!-- Job Matches -->
+      <div class="result-card">
+        <h3>💼 岗位匹配度</h3>
+        <div id="jobBars"></div>
+      </div>
+
+      <!-- Skills -->
+      <div class="result-card full">
+        <h3>🛠 技能分析</h3>
+        <div style="margin-bottom:12px;font-size:13px;color:var(--green);font-weight:600">✅ 已有技能</div>
+        <div class="skills-wrap" id="skillsExisting"></div>
+        <div style="margin:16px 0 12px;font-size:13px;color:var(--red);font-weight:600">❌ 缺失技能（建议补充）</div>
+        <div class="skills-wrap" id="skillsMissing"></div>
+      </div>
+
+      <!-- Analysis -->
+      <div class="result-card full">
+        <h3>🔍 问题分析</h3>
+        <p style="font-size:14px;line-height:1.8;color:var(--text-muted)" id="resAnalysis"></p>
+      </div>
+
+      <!-- Suggestions -->
+      <div class="result-card full">
+        <h3>💡 优化建议</h3>
+        <ul class="suggestion-list" id="resSuggestions"></ul>
+      </div>
+
+      <!-- Project Suggestions -->
+      <div class="result-card full" id="projectCard" style="display:none">
+        <h3>📁 项目经历优化</h3>
+        <ul class="suggestion-list" id="resProject"></ul>
+      </div>
+
+      <!-- Comparison -->
+      <div class="result-card full">
+        <h3>📝 简历对比</h3>
+        <div class="compare-wrap">
+          <div class="compare-col">
+            <h4>📄 原始简历</h4>
+            <pre id="resOriginal"></pre>
+          </div>
+          <div class="compare-col">
+            <h4>✨ AI 优化版</h4>
+            <button class="btn-copy" onclick="copyOptimized()">📋 复制</button>
+            <pre id="resOptimized"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- ATS Score Breakdown -->
+      <div class="result-card full" id="atsBreakdown" style="display:none">
+        <h3>📊 评分详情</h3>
+        <div id="atsDetail"></div>
+      </div>
+
+      <!-- Download Printable -->
+      <div class="result-card full" id="downloadCard" style="display:none">
+        <h3>⬇️ 导出打印版简历</h3>
+        <p style="font-size:14px;color:var(--text-muted);margin-bottom:16px;line-height:1.7">
+          生成一份 A4 尺寸的 HTML 简历文件，打开后按 <kbd style="background:var(--card-border);padding:2px 8px;border-radius:6px;font-size:13px">Ctrl+P</kbd> 即可打印或导出 PDF
+        </p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <button onclick="downloadResumeHtml()" style="flex:1;min-width:200px;padding:16px 24px;border-radius:14px;border:2px solid var(--accent);background:rgba(99,102,241,.06);color:var(--accent);font-size:15px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px" onmouseenter="this.style.background='rgba(99,102,241,.12)';this.style.transform='translateY(-2px)'" onmouseleave="this.style.background='rgba(99,102,241,.06)';this.style.transform='none'">
+            📥 下载 HTML 文件
+          </button>
+          <button onclick="previewResumeHtml()" style="flex:1;min-width:200px;padding:16px 24px;border-radius:14px;border:2px solid var(--card-border);background:var(--card);color:var(--text-muted);font-size:15px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px" onmouseenter="this.style.borderColor='var(--blue)';this.style.color='var(--blue)';this.style.transform='translateY(-2px)'" onmouseleave="this.style.borderColor='var(--card-border)';this.style.color='var(--text-muted)';this.style.transform='none'">
+            👁 预览（新窗口）
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h2 style="font-size:20px;margin-bottom:24px" id="modalTitle">📋 记录详情</h2>
+    <div class="result-grid">
+      <div class="result-card">
+        <h3>🎯 ATS 评分</h3>
+        <div class="ats-ring-wrap">
+          <div class="ats-ring">
+            <svg width="160" height="160"><circle class="bg" cx="80" cy="80" r="65"/><circle class="fg" id="mAtsCircle" cx="80" cy="80" r="65" stroke-dasharray="408" stroke-dashoffset="408"/></svg>
+            <div class="score-text"><span class="score-num" id="mAtsNum">0</span><span class="score-label">ATS SCORE</span></div>
+          </div>
+          <div class="ats-grade" id="mAtsGrade"></div>
+        </div>
+      </div>
+      <div class="result-card"><h3>💼 岗位匹配度</h3><div id="mJobBars"></div></div>
+      <div class="result-card full"><h3>🛠 技能分析</h3>
+        <div style="margin-bottom:12px;font-size:13px;color:var(--green);font-weight:600">✅ 已有技能</div>
+        <div class="skills-wrap" id="mSkillsExisting"></div>
+        <div style="margin:16px 0 12px;font-size:13px;color:var(--red);font-weight:600">❌ 缺失技能</div>
+        <div class="skills-wrap" id="mSkillsMissing"></div>
+      </div>
+      <div class="result-card full"><h3>🔍 问题分析</h3><p style="font-size:14px;line-height:1.8;color:var(--text-muted)" id="mAnalysis"></p></div>
+      <div class="result-card full"><h3>💡 优化建议</h3><ul class="suggestion-list" id="mSuggestions"></ul></div>
+      <div class="result-card full"><h3>📝 简历对比</h3>
+        <div class="compare-wrap">
+          <div class="compare-col"><h4>📄 原始简历</h4><pre id="mOriginal"></pre></div>
+          <div class="compare-col"><h4>✨ AI 优化版</h4><button class="btn-copy" onclick="copyModalOptimized()">📋 复制</button><pre id="mOptimized"></pre></div>
+        </div>
+      </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Feature Modal -->
+<div class="modal-overlay" id="featureModal">
+  <div class="modal feat-modal">
+    <button class="modal-close" onclick="closeFeatureModal()">✕</button>
+    <div class="feat-header">
+      <div class="feat-header-icon" id="fmIcon">✉️</div>
+      <div>
+        <h2 id="fmTitle">功能结果</h2>
+        <p id="fmDesc">AI 分析结果</p>
+      </div>
+    </div>
+    <div id="fmContent"></div>
+  </div>
+</div>
+
+<!-- API Key Modal -->
+<div class="modal-overlay" id="apiKeyModal">
+  <div class="modal ak-modal">
+    <button class="modal-close" onclick="closeApiKeyModal()">✕</button>
+    <div class="ak-header">
+      <div class="ak-header-icon">🔑</div>
+      <div>
+        <h2 id="apiKeyModalTitle">添加 API Key</h2>
+        <p>配置你自己的模型密钥，分析简历时将优先使用</p>
+      </div>
+    </div>
+
+    <!-- Provider Selection -->
+    <div class="ak-form-label">选择模型 <span class="ak-required">*</span></div>
+    <div class="ak-provider-grid" id="akProviderGrid">
+      <div class="ak-provider-card selected" data-v="deepseek" onclick="selectProvider('deepseek')">
+        <div class="ak-p-icon" style="background:linear-gradient(135deg,#4F46E5,#818CF8);color:#fff">DS</div>
+        <div><div class="ak-p-name">DeepSeek</div><div class="ak-p-desc">深度推理 · 性价比高</div></div>
+        <div class="ak-p-check">✓</div>
+      </div>
+      <div class="ak-provider-card" data-v="qwen" onclick="selectProvider('qwen')">
+        <div class="ak-p-icon" style="background:linear-gradient(135deg,#2563EB,#3B82F6);color:#fff">QW</div>
+        <div><div class="ak-p-name">通义千问</div><div class="ak-p-desc">阿里云 · 中文优化</div></div>
+        <div class="ak-p-check">✓</div>
+      </div>
+      <div class="ak-provider-card" data-v="kimi" onclick="selectProvider('kimi')">
+        <div class="ak-p-icon" style="background:linear-gradient(135deg,#059669,#10B981);color:#fff">KM</div>
+        <div><div class="ak-p-name">Kimi</div><div class="ak-p-desc">月之暗面 · 长上下文</div></div>
+        <div class="ak-p-check">✓</div>
+      </div>
+      <div class="ak-provider-card" data-v="mimo" onclick="selectProvider('mimo')">
+        <div class="ak-p-icon" style="background:linear-gradient(135deg,#F59E0B,#F97316);color:#fff">Mi</div>
+        <div><div class="ak-p-name">MiMo</div><div class="ak-p-desc">小米 · 轻量高效</div></div>
+        <div class="ak-p-check">✓</div>
+      </div>
+    </div>
+
+    <!-- Form -->
+    <div class="ak-form-group">
+      <div class="ak-form-label">API Key <span class="ak-required">*</span></div>
+      <div class="ak-input-wrap">
+        <input type="password" class="ak-input" id="akApiKey" placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxx" autocomplete="off">
+        <button class="ak-toggle-vis" onclick="toggleKeyVis('akApiKey',this)" title="显示/隐藏">👁</button>
+      </div>
+    </div>
+    <div class="ak-form-group">
+      <div class="ak-form-label">Base URL <span class="ak-hint">留空使用默认地址</span></div>
+      <input type="text" class="ak-input" id="akBaseUrl" placeholder="https://api.deepseek.com">
+    </div>
+    <div class="ak-form-group">
+      <div class="ak-form-label">模型名称 <span class="ak-hint">留空使用默认模型</span></div>
+      <input type="text" class="ak-input" id="akModel" placeholder="deepseek-chat">
+    </div>
+
+    <input type="hidden" id="akEditId">
+    <input type="hidden" id="akSelectedProvider" value="deepseek">
+
+    <!-- Test Result -->
+    <div class="ak-test-result" id="akTestResult"></div>
+
+    <!-- Actions -->
+    <div class="ak-actions">
+      <button class="ak-btn-cancel" onclick="closeApiKeyModal()">取消</button>
+      <button class="ak-btn-test" id="akTestBtn" onclick="testApiKey()">🔍 测试连接</button>
+      <button class="ak-btn-save" onclick="saveApiKey()">💾 保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '';
+function getToken(){return localStorage.getItem('token')}
+function authHeaders(json=true){const h={};const t=getToken();if(t)h['Authorization']='Bearer '+t;if(json)h['Content-Type']='application/json';return h}
+if(!getToken()) window.location.href='/login';
+
+(async function(){
+  try{
+    const r=await fetch(API+'/auth/me',{headers:authHeaders(false)});
+    if(!r.ok) throw 0;
+    const u=await r.json();
+    document.getElementById('navUsername').textContent=u.username;
+    document.getElementById('navAvatar').textContent=u.username[0].toUpperCase();
+  }catch(e){localStorage.removeItem('token');window.location.href='/login'}
+})();
+
+function doLogout(){localStorage.removeItem('token');window.location.href='/login'}
+
+// ===== Model Selector =====
+let providers = [];
+async function loadProviders(){
+  try{
+    const r=await fetch(API+'/providers',{headers:authHeaders(false)});
+    providers=await r.json();
+    const sel1=document.getElementById('modelSelect');
+    const sel2=document.getElementById('modelSelectFile');
+    [sel1,sel2].forEach(sel=>{
+      sel.innerHTML=providers.map(p=>`<option value="${p.id}" ${!p.available?'disabled':''}>${p.name} (${p.model})${!p.available?' - 未配置':''}</option>`).join('');
+    });
+  }catch(e){console.error('loadProviders failed:',e)}
+}
+loadProviders();
+
+// ===== Tabs =====
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',['text','file','features','history','settings'][i]===name));
+  document.getElementById('panel-text').style.display=name==='text'?'':'none';
+  document.getElementById('panel-file').style.display=name==='file'?'':'none';
+  document.getElementById('panel-features').style.display=name==='features'?'':'none';
+  document.getElementById('panel-history').style.display=name==='history'?'':'none';
+  document.getElementById('panel-settings').style.display=name==='settings'?'':'none';
+  hide('results');hide('analysisBox');hide('errorMsg');
+  if(name==='history') loadHistory();
+  if(name==='settings') loadApiKeys();
+  if(name==='features') loadFeatureResumes();
+}
+
+// ===== File =====
+function onFileSelect(e){const f=e.target.files[0];if(f){document.getElementById('fileName').textContent='📎 '+f.name;document.getElementById('btnFile').disabled=false}}
+const dz=document.getElementById('dropZone');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('dragover')});
+dz.addEventListener('dragleave',()=>dz.classList.remove('dragover'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('dragover');const f=e.dataTransfer.files[0];if(f){document.getElementById('fileInput').files=e.dataTransfer.files;document.getElementById('fileName').textContent='📎 '+f.name;document.getElementById('btnFile').disabled=false}});
+
+// ===== Analysis Animation =====
+function showAnalysisSteps(){
+  const box=document.getElementById('analysisBox');
+  box.classList.add('show');
+  const steps=['step1','step2','step3','step4','step5','step6'];
+  steps.forEach((s,i)=>{
+    setTimeout(()=>{
+      const el=document.getElementById(s);
+      el.classList.add('visible');
+      if(i>0){const prev=document.getElementById(steps[i-1]);prev.querySelector('.icon').textContent='✓';prev.classList.remove('active');prev.classList.add('done')}
+      el.classList.add('active');
+    },(i+1)*600);
+  });
+}
+function resetSteps(){
+  ['step1','step2','step3','step4','step5','step6'].forEach(s=>{
+    const el=document.getElementById(s);
+    el.classList.remove('visible','active','done');
+    el.querySelector('.icon').innerHTML='○';
+  });
+  document.getElementById('step6').querySelector('.icon').innerHTML='<span class="spinner-sm"></span>';
+}
+
+// ===== Submit =====
+async function submitText(){
+  const text=document.getElementById('resumeText').value.trim();
+  if(!text) return showError('请输入简历内容');
+  const provider=document.getElementById('modelSelect').value;
+  setLoading(true);resetSteps();showAnalysisSteps();
+  try{
+    const r=await fetch(API+'/optimize',{method:'POST',headers:authHeaders(),body:JSON.stringify({content:text,provider:provider})});
+    const d=await r.json();if(!r.ok) throw new Error(d.detail||'请求失败');
+    showResults(d);
+  }catch(e){showError(e.message)}
+  setLoading(false);
+}
+async function submitFile(){
+  const file=document.getElementById('fileInput').files[0];
+  if(!file) return showError('请选择文件');
+  const provider=document.getElementById('modelSelectFile').value;
+  setLoading(true);resetSteps();showAnalysisSteps();
+  try{
+    const form=new FormData();form.append('file',file);
+    const h={};const t=getToken();if(t)h['Authorization']='Bearer '+t;
+    const r=await fetch(API+'/upload?provider='+encodeURIComponent(provider),{method:'POST',headers:h,body:form});
+    const d=await r.json();if(!r.ok) throw new Error(d.detail||'请求失败');
+    showResults(d);
+  }catch(e){showError(e.message)}
+  setLoading(false);
+}
+
+// ===== Show Results =====
+function showResults(d){
+  hide('analysisBox');
+  const el=document.getElementById('results');el.classList.add('show');
+
+  // ATS
+  renderATS('atsCircle','atsNum','atsGrade',d.ats_score||0);
+  showAtsBreakdown(d);
+  // Jobs
+  renderJobs('jobBars',d.job_matches||[]);
+  // Skills
+  renderSkills('skillsExisting',d.skills_existing||[],'has');
+  renderSkills('skillsMissing',d.skills_missing||[],'miss');
+  // Analysis
+  document.getElementById('resAnalysis').textContent=d.analysis||'无';
+  // Suggestions
+  document.getElementById('resSuggestions').innerHTML=(d.suggestions||[]).map(s=>`<li>${esc(s)}</li>`).join('');
+  // Project
+  const pc=document.getElementById('projectCard');
+  if(d.project_suggestions&&d.project_suggestions.length){pc.style.display='';document.getElementById('resProject').innerHTML=d.project_suggestions.map(s=>`<li>${esc(s)}</li>`).join('')}else{pc.style.display='none'}
+  // Comparison
+  document.getElementById('resOriginal').textContent=d.original_content||'无';
+  document.getElementById('resOptimized').textContent=d.optimized_content||'无';
+
+  // Download card
+  const dlCard=document.getElementById('downloadCard');
+  if(d.optimized_content){dlCard.style.display=''}else{dlCard.style.display='none'}
+
+  el.scrollIntoView({behavior:'smooth'});
+}
+
+function renderATS(circleId,numId,gradeId,score){
+  const circ=408;const offset=circ-(circ*score/100);
+  const el=document.getElementById(circleId);
+  let color=score>=90?'var(--green)':score>=80?'var(--blue)':score>=70?'var(--orange)':'var(--red)';
+  el.style.stroke=color;
+  setTimeout(()=>{el.style.strokeDashoffset=offset},100);
+  document.getElementById(numId).textContent=score;
+  const g=document.getElementById(gradeId);
+  if(score>=90){g.textContent='🏆 优秀';g.style.background='rgba(34,197,94,.15)';g.style.color='var(--green)'}
+  else if(score>=80){g.textContent='👍 良好';g.style.background='rgba(59,130,246,.15)';g.style.color='var(--blue)'}
+  else if(score>=70){g.textContent='📝 合格';g.style.background='rgba(245,158,11,.15)';g.style.color='var(--orange)'}
+  else{g.textContent='⚠️ 需优化';g.style.background='rgba(239,68,68,.15)';g.style.color='var(--red)'}
+}
+
+function showAtsBreakdown(d){
+  const score=d.ats_score||0;
+  const skills=d.skills_existing||[];
+  const missing=d.skills_missing||[];
+  const jobs=d.job_matches||[];
+  const el=document.getElementById('atsDetail');
+  const bd=document.getElementById('atsBreakdown');
+  if(!score&&!skills.length&&!jobs.length){bd.style.display='none';return}
+  bd.style.display='';
+
+  const dims=[
+    {label:'关键词匹配',score:Math.min(100,score+Math.round((skills.length-missing.length)*3)),icon:'🔑'},
+    {label:'格式规范度',score:Math.min(100,score+5),icon:'📐'},
+    {label:'内容完整度',score:Math.min(100,score-Math.round(missing.length*2)),icon:'📋'},
+    {label:'量化成果',score:Math.max(0,score-10+Math.round(jobs.length*2)),icon:'📈'},
+  ];
+
+  el.innerHTML=dims.map(d=>{
+    const c=d.score>=90?'var(--green)':d.score>=80?'var(--blue)':d.score>=70?'var(--orange)':'var(--red)';
+    return `<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+      <span style="font-size:18px;width:28px;text-align:center">${d.icon}</span>
+      <span style="font-size:13px;color:var(--text-muted);width:80px;flex-shrink:0">${d.label}</span>
+      <div style="flex:1;height:8px;background:var(--card-border);border-radius:4px;overflow:hidden">
+        <div style="height:100%;width:${d.score}%;background:${c};border-radius:4px;transition:width 1s ease"></div>
+      </div>
+      <span style="font-size:14px;font-weight:700;color:${c};width:36px;text-align:right">${d.score}</span>
+    </div>`
+  }).join('');
+}
+
+function renderJobs(containerId,matches){
+  const el=document.getElementById(containerId);
+  el.innerHTML=matches.map(m=>{
+    const color=m.score>=90?'var(--green)':m.score>=80?'var(--blue)':m.score>=70?'var(--orange)':'var(--red)';
+    return `<div class="job-bar"><div class="label"><span>${esc(m.title)}</span><span>${m.score}%</span></div><div class="track"><div class="fill" style="width:0%;background:${color}" data-w="${m.score}%"></div></div></div>`
+  }).join('');
+  setTimeout(()=>{el.querySelectorAll('.fill').forEach(f=>{f.style.width=f.dataset.w})},100);
+}
+
+function renderSkills(containerId,skills,cls){
+  document.getElementById(containerId).innerHTML=skills.map(s=>`<span class="skill-tag ${cls}">${esc(s)}</span>`).join('');
+}
+
+function copyOptimized(){navigator.clipboard.writeText(document.getElementById('resOptimized').textContent).then(()=>showToast('已复制'))}
+
+function downloadResumeHtml(){
+  const text=getOptimizedText();
+  if(!text){showError('暂无优化内容');return}
+  const html=generateResumeHtml(text);
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='优化版简历.html';a.click();
+  URL.revokeObjectURL(url);
+  showToast('已下载，请在浏览器中打开后 Ctrl+P 打印');
+}
+
+function previewResumeHtml(){
+  const text=getOptimizedText();
+  if(!text){showError('暂无优化内容');return}
+  const html=generateResumeHtml(text);
+  const w=window.open('','_blank');
+  w.document.write(html);w.document.close();
+}
+
+function getOptimizedText(){
+  return document.getElementById('resOptimized').textContent||document.getElementById('mOptimized').textContent||'';
+}
+
+function generateResumeHtml(text){
+  // 按段落拆分，识别标题和内容
+  const lines=text.split('\n').map(l=>l.trim()).filter(Boolean);
+  let sections=[];let current={title:'',lines:[]};
+
+  // 智能识别标题行（短且不含句号/逗号的行视为标题）
+  for(const line of lines){
+    const isTitle=line.length<=20&&!line.includes('。')&&!line.includes('，')&&!line.includes('；')
+      &&(/^[A-Z\u4e00-\u9fff]/.test(line))&&!line.includes('http');
+    if(isTitle&&current.lines.length>0){
+      sections.push(current);current={title:line,lines:[]};
+    }else if(isTitle&&!current.title){
+      current.title=line;
+    }else{
+      current.lines.push(line);
+    }
+  }
+  if(current.title||current.lines.length) sections.push(current);
+
+  // 生成 HTML
+  let body='';
+  for(const sec of sections){
+    if(!sec.title&&sec.lines.length===1){
+      // 单行无标题 → 可能是姓名，大字显示
+      body+=`<div style="text-align:center;margin-bottom:20px"><h1 style="font-size:28px;font-weight:700;color:#1a1a1a;letter-spacing:4px;margin:0">${escH(sec.lines[0])}</h1></div>`;
+    }else if(!sec.title){
+      // 无标题内容
+      body+=sec.lines.map(l=>`<p style="margin:4px 0;font-size:13px;color:#333;line-height:1.8">${escH(l)}</p>`).join('');
+    }else{
+      body+=`<div style="margin-bottom:18px">
+        <h2 style="font-size:15px;font-weight:700;color:#1a1a1a;border-bottom:2px solid #2c3e50;padding-bottom:6px;margin-bottom:10px">${escH(sec.title)}</h2>`;
+      for(const line of sec.lines){
+        if(line.startsWith('·')||line.startsWith('-')||line.startsWith('*')){
+          body+=`<div style="margin:3px 0;padding-left:12px;font-size:12.5px;color:#333;line-height:1.7">• ${escH(line.replace(/^[\·\-\*]\s*/,''))}</div>`;
+        }else{
+          body+=`<p style="margin:4px 0;font-size:12.5px;color:#333;line-height:1.7">${escH(line)}</p>`;
+        }
+      }
+      body+=`</div>`;
+    }
+  }
+
+  return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>简历 - ResumeAI 优化版</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;background:#f5f5f5;color:#333;line-height:1.6;font-size:13px}
+.page{width:210mm;min-height:297mm;margin:20px auto;background:#fff;padding:36px 42px;box-shadow:0 2px 12px rgba(0,0,0,.08)}
+.print-bar{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);display:flex;gap:12px;z-index:999}
+.print-btn{padding:12px 28px;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;border:none;transition:all .2s}
+.print-btn:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,.15)}
+.print-btn.primary{background:#6366F1;color:#fff}
+.print-btn.secondary{background:#fff;color:#333;border:1px solid #ddd}
+@media print{
+  body{background:#fff}
+  .page{margin:0;box-shadow:none;width:100%;padding:14mm 18mm;min-height:auto}
+  .print-bar{display:none!important}
+}
+@page{size:A4;margin:0}
+</style>
+</head>
+<body>
+<div class="page">${body}</div>
+<div class="print-bar">
+  <button class="print-btn primary" onclick="window.print()">🖨 打印 / 导出 PDF</button>
+  <button class="print-btn secondary" onclick="window.close()">✕ 关闭</button>
+</div>
+</body>
+</html>`;
+}
+
+function escH(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function copyModalOptimized(){navigator.clipboard.writeText(document.getElementById('mOptimized').textContent).then(()=>showToast('已复制'))}
+function showToast(msg){const t=document.createElement('div');t.style.cssText='position:fixed;bottom:32px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;padding:10px 24px;border-radius:12px;font-size:14px;font-weight:600;z-index:999;animation:fadeIn .3s ease';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2000)}
+
+// ===== History =====
+async function loadHistory(){
+  try{
+    const r=await fetch(API+'/history',{headers:authHeaders(false)});
+    if(r.status===401) return doLogout();
+    const list=await r.json();
+    const c=document.getElementById('historyList');
+    if(!list.length){c.innerHTML='<div class="empty">暂无优化记录<br><span style="font-size:13px">上传简历开始你的第一次优化吧</span></div>';return}
+    c.innerHTML=list.map(item=>{
+      const score=item.ats_score||0;
+      const color=score>=90?'var(--green)':score>=80?'var(--blue)':score>=70?'var(--orange)':'var(--red)';
+      const title=(item.original_content||'').slice(0,20)||'简历';
+      return `<div class="history-card" onclick="viewDetail(${item.id})">
+        <button class="h-del" onclick="event.stopPropagation();deleteRecord(${item.id})">✕</button>
+        <div class="h-title">${esc(title)}</div>
+        <div class="h-score" style="background:${color}20;color:${color}">ATS ${score}</div>
+        <div class="h-time">${new Date(item.created_at).toLocaleString('zh-CN')}</div>
+      </div>`
+    }).join('');
+  }catch(e){showError('加载历史失败: '+e.message)}
+}
+
+async function viewDetail(id){
+  try{
+    const r=await fetch(API+'/history/'+id,{headers:authHeaders(false)});
+    const d=await r.json();if(!r.ok) throw new Error(d.detail);
+    renderATS('mAtsCircle','mAtsNum','mAtsGrade',d.ats_score||0);
+    renderJobs('mJobBars',d.job_matches||[]);
+    renderSkills('mSkillsExisting',d.skills_existing||[],'has');
+    renderSkills('mSkillsMissing',d.skills_missing||[],'miss');
+    document.getElementById('mAnalysis').textContent=d.analysis||'无';
+    document.getElementById('mSuggestions').innerHTML=(d.suggestions||[]).map(s=>`<li>${esc(s)}</li>`).join('');
+    document.getElementById('mOriginal').textContent=d.original_content||'无';
+    document.getElementById('mOptimized').textContent=d.optimized_content||'无';
+    document.getElementById('modal').classList.add('show');
+    document.body.style.overflow='hidden';
+  }catch(e){showError(e.message)}
+}
+function closeModal(){document.getElementById('modal').classList.remove('show');document.body.style.overflow=''}
+
+async function deleteRecord(id){
+  if(!confirm('确定删除这条记录吗？')) return;
+  try{await fetch(API+'/history/'+id,{method:'DELETE',headers:authHeaders(false)});loadHistory()}catch(e){showError('删除失败')}
+}
+
+// ===== Utils =====
+function setLoading(v){
+  document.getElementById('btnText').disabled=v;
+  document.getElementById('btnFile').disabled=v;
+  if(v){hide('results');hide('errorMsg')}
+}
+function showError(msg){const el=document.getElementById('errorMsg');el.textContent='❌ '+msg;el.classList.add('show')}
+function hide(id){document.getElementById(id).classList.remove('show')}
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
+// ===== API Key Management =====
+async function loadApiKeys(){
+  try{
+    const r=await fetch(API+'/api-keys',{headers:authHeaders(false)});
+    if(r.status===401) return doLogout();
+    const list=await r.json();
+    const el=document.getElementById('apiKeyList');
+    if(!list.length){el.innerHTML='<div style="text-align:center;padding:32px;color:var(--text-dim)">暂未配置任何 API Key<br><span style="font-size:13px">点击下方按钮添加</span></div>';return}
+    const providerColors={deepseek:'#6366F1',qwen:'#3B82F6',kimi:'#10B981',mimo:'#F59E0B'};
+    const providerNames={deepseek:'DeepSeek',qwen:'通义千问',kimi:'Kimi',mimo:'MiMo'};
+    el.innerHTML=list.map(k=>{
+      const masked=k.api_key.slice(0,8)+'••••••••'+k.api_key.slice(-4);
+      const c=providerColors[k.provider]||'var(--accent)';
+      const statusBadge=k.is_active
+        ?'<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:rgba(34,197,94,.12);color:var(--green)">● 启用</span>'
+        :'<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:rgba(113,113,122,.12);color:var(--text-dim)">○ 禁用</span>';
+      return `<div style="display:flex;align-items:center;gap:14px;padding:16px 18px;background:var(--input-bg);border:1px solid var(--card-border);border-radius:14px;margin-bottom:10px;transition:border-color .2s" onmouseenter="this.style.borderColor='${c}'" onmouseleave="this.style.borderColor='var(--card-border)'">
+        <div style="width:40px;height:40px;border-radius:12px;background:${c};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0">${k.provider.slice(0,2).toUpperCase()}</div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+            <span style="font-size:14px;font-weight:600;color:var(--text)">${esc(providerNames[k.provider]||k.provider)}</span>
+            ${statusBadge}
+          </div>
+          <div style="font-size:12px;color:var(--text-dim);font-family:monospace;letter-spacing:.5px">${esc(masked)}</div>
+          ${k.model?`<div style="font-size:11px;color:var(--text-dim);margin-top:2px">模型: ${esc(k.model)}</div>`:''}
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button onclick="toggleApiKey(${k.id})" title="${k.is_active?'禁用':'启用'}" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--card-border);background:transparent;color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .2s" onmouseenter="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseleave="this.style.borderColor='var(--card-border)';this.style.color='var(--text-muted)'">${k.is_active?'⏸':'▶'}</button>
+          <button onclick="editApiKey(${k.id},'${esc(k.provider)}','${esc(k.api_key)}','${esc(k.base_url||'')}',${k.model?`'${esc(k.model)}'`:'null'})" title="编辑" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--card-border);background:transparent;color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .2s" onmouseenter="this.style.borderColor='var(--blue)';this.style.color='var(--blue)'" onmouseleave="this.style.borderColor='var(--card-border)';this.style.color='var(--text-muted)'">✏️</button>
+          <button onclick="deleteApiKey(${k.id})" title="删除" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--card-border);background:transparent;color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .2s" onmouseenter="this.style.borderColor='var(--red)';this.style.color='var(--red)'" onmouseleave="this.style.borderColor='var(--card-border)';this.style.color='var(--text-muted)'">🗑</button>
+        </div>
+      </div>`
+    }).join('');
+  }catch(e){console.error('loadApiKeys failed:',e)}
+}
+
+const PROVIDER_DEFAULTS={deepseek:{url:'https://api.deepseek.com',model:'deepseek-chat'},qwen:{url:'https://dashscope.aliyuncs.com/compatible-mode/v1',model:'qwen-plus'},kimi:{url:'https://api.moonshot.cn/v1',model:'moonshot-v1-8k'},mimo:{url:'https://api.xiaomi.com/v1',model:'mimo-auto'}};
+
+function selectProvider(v){
+  document.getElementById('akSelectedProvider').value=v;
+  document.querySelectorAll('.ak-provider-card').forEach(c=>{
+    c.classList.toggle('selected',c.dataset.v===v);
+  });
+  const d=PROVIDER_DEFAULTS[v]||{};
+  document.getElementById('akBaseUrl').placeholder=d.url||'';
+  document.getElementById('akModel').placeholder=d.model||'';
+  // Clear test result
+  const tr=document.getElementById('akTestResult');
+  tr.className='ak-test-result';tr.textContent='';
+}
+
+function toggleKeyVis(inputId,btn){
+  const inp=document.getElementById(inputId);
+  if(inp.type==='password'){inp.type='text';btn.textContent='🙈'}
+  else{inp.type='password';btn.textContent='👁'}
+}
+
+function showAddApiKey(){
+  document.getElementById('akEditId').value='';
+  document.getElementById('akApiKey').value='';
+  document.getElementById('akBaseUrl').value='';
+  document.getElementById('akModel').value='';
+  document.getElementById('akApiKey').type='password';
+  selectProvider('deepseek');
+  document.getElementById('apiKeyModalTitle').textContent='添加 API Key';
+  const tr=document.getElementById('akTestResult');
+  tr.className='ak-test-result';tr.textContent='';
+  document.getElementById('apiKeyModal').classList.add('show');
+  document.body.style.overflow='hidden';
+}
+
+function editApiKey(id,provider,apikey,baseurl,model){
+  document.getElementById('akEditId').value=id;
+  document.getElementById('akApiKey').value=apikey;
+  document.getElementById('akBaseUrl').value=baseurl;
+  document.getElementById('akModel').value=model||'';
+  document.getElementById('akApiKey').type='password';
+  selectProvider(provider);
+  document.getElementById('apiKeyModalTitle').textContent='编辑 API Key';
+  const tr=document.getElementById('akTestResult');
+  tr.className='ak-test-result';tr.textContent='';
+  document.getElementById('apiKeyModal').classList.add('show');
+  document.body.style.overflow='hidden';
+}
+
+function closeApiKeyModal(){document.getElementById('apiKeyModal').classList.remove('show');document.body.style.overflow=''}
+
+async function testApiKey(){
+  const provider=document.getElementById('akSelectedProvider').value;
+  const api_key=document.getElementById('akApiKey').value.trim();
+  const base_url=document.getElementById('akBaseUrl').value.trim()||undefined;
+  const model=document.getElementById('akModel').value.trim()||undefined;
+  const tr=document.getElementById('akTestResult');
+  const btn=document.getElementById('akTestBtn');
+
+  if(!api_key){tr.className='ak-test-result show fail';tr.textContent='❌ 请先输入 API Key';return}
+
+  btn.innerHTML='<span class="ak-spinner"></span> 测试中...';
+  btn.disabled=true;
+  tr.className='ak-test-result';
+
+  try{
+    const r=await fetch(API+'/api-keys/test',{
+      method:'POST',headers:authHeaders(),
+      body:JSON.stringify({provider,api_key,base_url,model})
+    });
+    const d=await r.json();
+    if(r.ok&&d.ok){
+      tr.className='ak-test-result show ok';tr.innerHTML='✅ 连接成功 · 模型: '+esc(d.model||'unknown');
+    }else{
+      tr.className='ak-test-result show fail';tr.textContent='❌ '+esc(d.detail||'连接失败');
+    }
+  }catch(e){
+    tr.className='ak-test-result show fail';tr.textContent='❌ 网络错误: '+esc(e.message);
+  }
+  btn.innerHTML='🔍 测试连接';
+  btn.disabled=false;
+}
+
+async function saveApiKey(){
+  const editId=document.getElementById('akEditId').value;
+  const provider=document.getElementById('akSelectedProvider').value;
+  const api_key=document.getElementById('akApiKey').value.trim();
+  const base_url=document.getElementById('akBaseUrl').value.trim()||null;
+  const model=document.getElementById('akModel').value.trim()||null;
+  if(!api_key){showError('请输入 API Key');return}
+  try{
+    if(editId){
+      await fetch(API+'/api-keys/'+editId,{method:'PUT',headers:authHeaders(),body:JSON.stringify({api_key,base_url,model})});
+    }else{
+      await fetch(API+'/api-keys',{method:'POST',headers:authHeaders(),body:JSON.stringify({provider,api_key,base_url,model})});
+    }
+    closeApiKeyModal();loadApiKeys();loadProviders();
+  }catch(e){showError('保存失败: '+e.message)}
+}
+
+async function toggleApiKey(id){
+  try{await fetch(API+'/api-keys/'+id+'/toggle',{method:'POST',headers:authHeaders(false)});loadApiKeys();loadProviders()}catch(e){showError('操作失败')}
+}
+
+async function deleteApiKey(id){
+  if(!confirm('确定删除这个 API Key？')) return;
+  try{await fetch(API+'/api-keys/'+id,{method:'DELETE',headers:authHeaders(false)});loadApiKeys();loadProviders()}catch(e){showError('删除失败')}
+}
+
+// ===== Feature Functions =====
+let featureResumes = [];
+
+function switchFeatureTab(name){
+  document.querySelectorAll('.feature-tab').forEach((t,i)=>t.classList.toggle('active',['cover-letter','interview-prep','skills-gap','ats-check'][i]===name));
+  document.querySelectorAll('.feature-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('fp-'+name).classList.add('active');
+}
+
+async function loadFeatureResumes(){
+  try{
+    const r=await fetch(API+'/history',{headers:authHeaders(false)});
+    if(r.status===401) return doLogout();
+    featureResumes=await r.json();
+    const sel=document.getElementById('featureResumeSelect');
+    if(!featureResumes.length){
+      sel.innerHTML='<option value="">暂无简历，请先优化一份</option>';
+      return;
+    }
+    sel.innerHTML='<option value="">请选择简历...</option>'+
+      featureResumes.map(r=>{
+        const title=(r.original_content||'').slice(0,40)||'简历';
+        const score=r.ats_score||0;
+        return `<option value="${r.id}">[${score}分] ${esc(title)}</option>`;
+      }).join('');
+  }catch(e){console.error('loadFeatureResumes:',e)}
+}
+
+function onFeatureResumeChange(){
+  const id=parseInt(document.getElementById('featureResumeSelect').value);
+  const r=featureResumes.find(x=>x.id===id);
+  const preview=document.getElementById('featureResumePreview');
+  if(r){
+    preview.textContent='ATS评分: '+(r.ats_score||0)+' | 技能: '+(r.skills_existing||[]).join(', ');
+  }else{
+    preview.textContent='';
+  }
+}
+
+function getSelectedResumeId(){
+  const id=parseInt(document.getElementById('featureResumeSelect').value);
+  if(!id){showError('请先选择一份简历');return null}
+  return id;
+}
+
+// ===== Cover Letter =====
+async function generateCoverLetter(){
+  const resumeId=getSelectedResumeId();if(!resumeId)return;
+  const jd=document.getElementById('clJdInput').value.trim()||null;
+  const company=document.getElementById('clCompanyInput').value.trim()||null;
+  const tone=document.getElementById('clToneSelect').value;
+  const btn=document.getElementById('btnCoverLetter');
+  btn.disabled=true;btn.innerHTML='<span class="spinner-sm"></span> 生成中...';
+  document.getElementById('clLoading').style.display='';
+  document.getElementById('clResult').style.display='none';
+  document.getElementById('btnCopyCl').style.display='none';
+  try{
+    const r=await fetch(API+'/cover-letter',{method:'POST',headers:authHeaders(),
+      body:JSON.stringify({resume_id:resumeId,job_description:jd,company_name:company,tone})});
+    const d=await r.json();if(!r.ok) throw new Error(d.detail||'请求失败');
+    document.getElementById('clResult').textContent=d.cover_letter;
+    document.getElementById('clResult').style.display='';
+    document.getElementById('btnCopyCl').style.display='';
+  }catch(e){showError(e.message)}
+  document.getElementById('clLoading').style.display='none';
+  btn.disabled=false;btn.innerHTML='✉️ 生成求职信';
+}
+
+// ===== Interview Prep =====
+async function generateInterviewPrep(){
+  const resumeId=getSelectedResumeId();if(!resumeId)return;
+  const jd=document.getElementById('ipJdInput').value.trim()||null;
+  const count=parseInt(document.getElementById('ipCountSelect').value);
+  const btn=document.getElementById('btnInterviewPrep');
+  btn.disabled=true;btn.innerHTML='<span class="spinner-sm"></span> 生成中...';
+  document.getElementById('ipLoading').style.display='';
+  document.getElementById('ipResult').style.display='none';
+  try{
+    const r=await fetch(API+'/interview-prep',{method:'POST',headers:authHeaders(),
+      body:JSON.stringify({resume_id:resumeId,job_description:jd,question_count:count})});
+    const d=await r.json();if(!r.ok) throw new Error(d.detail||'请求失败');
+    renderInterviewQuestions(d.questions||[]);
+    document.getElementById('ipResult').style.display='';
+  }catch(e){showError(e.message)}
+  document.getElementById('ipLoading').style.display='none';
+  btn.disabled=false;btn.innerHTML='🎤 生成面试题';
+}
+
+function renderInterviewQuestions(questions){
+  const el=document.getElementById('ipResult');
+  el.innerHTML=questions.map((q,i)=>{
+    const catCls=q.category.includes('技术')?'badge-tech':q.category.includes('行为')?'badge-behavior':q.category.includes('情景')?'badge-scenario':'badge-career';
+    const diffCls=q.difficulty==='easy'?'badge-easy':q.difficulty==='hard'?'badge-hard':'badge-medium';
+    const diffLabel=q.difficulty==='easy'?'简单':q.difficulty==='hard'?'困难':'中等';
+    return `<div class="question-card">
+      <div class="question-header">
+        <span style="font-size:13px;font-weight:700;color:var(--text-dim)">#${i+1}</span>
+        <span class="question-badge ${catCls}">${esc(q.category)}</span>
+        <span class="question-badge ${diffCls}">${diffLabel}</span>
+      </div>
+      <div class="question-text">${esc(q.question)}</div>
+      <div class="question-answer"><strong>参考答案：</strong>${esc(q.suggested_answer)}</div>
+      <div class="question-tips">💡 ${esc(q.tips)}</div>
+    </div>`;
+  }).join('');
+}
+
+// ===== Skills Gap =====
+async function generateSkillsGap(){
+  const resumeId=getSelectedResumeId();if(!resumeId)return;
+  const jd=document.getElementById('sgJdInput').value.trim();
+  if(!jd){showError('请输入目标岗位JD');return}
+  const btn=document.getElementById('btnSkillsGap');
+  btn.disabled=true;btn.innerHTML='<span class="spinner-sm"></span> 分析中...';
+  document.getElementById('sgLoading').style.display='';
+  document.getElementById('sgResult').style.display='none';
+  try{
+    const r=await fetch(API+'/skills-gap',{method:'POST',headers:authHeaders(),
+      body:JSON.stringify({resume_id:resumeId,job_description:jd})});
+    const d=await r.json();if(!r.ok) throw new Error(d.detail||'请求失败');
+    renderSkillsGapResult(d);
+    document.getElementById('sgResult').style.display='';
+  }catch(e){showError(e.message)}
+  document.getElementById('sgLoading').style.display='none';
+  btn.disabled=false;btn.innerHTML='📊 分析技能差距';
+}
+
+function renderSkillsGapResult(d){
+  const el=document.getElementById('sgResult');
+  const matchColor=d.match_percentage>=80?'var(--green)':d.match_percentage>=60?'var(--orange)':'var(--red)';
+  let html=`<div class="feature-card">
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:48px;font-weight:800;color:${matchColor}">${d.match_percentage}%</div>
+      <div style="font-size:14px;color:var(--text-dim);margin-top:4px">技能匹配度</div>
+    </div>
+    <div style="font-size:14px;color:var(--text-muted);line-height:1.8;margin-bottom:20px">${esc(d.summary)}</div>
+    <div style="font-size:14px;font-weight:700;margin-bottom:12px">📋 详细分析</div>`;
+
+  (d.gap_items||[]).forEach(item=>{
+    const color=item.has_in_resume?'var(--green)':'var(--red)';
+    const icon=item.has_in_resume?'✅':'❌';
+    const impColor=item.importance==='critical'?'var(--red)':item.importance==='important'?'var(--orange)':'var(--text-dim)';
+    const impLabel=item.importance==='critical'?'关键':item.importance==='important'?'重要':'加分';
+    html+=`<div style="padding:12px;background:var(--input-bg);border:1px solid var(--card-border);border-radius:12px;margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <span>${icon}</span>
+        <span style="font-size:14px;font-weight:600;color:var(--text)">${esc(item.skill)}</span>
+        <span class="gap-tag" style="background:${impColor}15;color:${impColor};border:1px solid ${impColor}30;font-size:11px">${impLabel}</span>
+        <span style="font-size:11px;color:var(--text-dim);margin-left:auto">${esc(item.category)}</span>
+      </div>
+      <div style="font-size:12px;color:var(--text-muted);line-height:1.6">${esc(item.suggestion)}</div>
+    </div>`;
+  });
+  html+=`</div>`;
+  el.innerHTML=html;
+}
+
+// ===== ATS Check =====
+async function generateAtsCheck(){
+  const resumeId=getSelectedResumeId();if(!resumeId)return;
+  const btn=document.getElementById('btnAtsCheck');
+  btn.disabled=true;btn.innerHTML='<span class="spinner-sm"></span> 检查中...';
+  document.getElementById('acLoading').style.display='';
+  document.getElementById('acResult').style.display='none';
+  try{
+    const r=await fetch(API+'/ats-check',{method:'POST',headers:authHeaders(),
+      body:JSON.stringify({resume_id:resumeId})});
+    const d=await r.json();if(!r.ok) throw new Error(d.detail||'请求失败');
+    renderAtsCheckResult(d);
+    document.getElementById('acResult').style.display='';
+  }catch(e){showError(e.message)}
+  document.getElementById('acLoading').style.display='none';
+  btn.disabled=false;btn.innerHTML='🔍 开始检查';
+}
+
+function renderAtsCheckResult(d){
+  const el=document.getElementById('acResult');
+  const scoreColor=d.total_score>=80?'var(--green)':d.total_score>=60?'var(--orange)':'var(--red)';
+  let html=`<div class="feature-card">
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:48px;font-weight:800;color:${scoreColor}">${d.total_score}</div>
+      <div style="font-size:14px;color:var(--text-dim);margin-top:4px">ATS 兼容性评分</div>
+    </div>
+    <div style="font-size:14px;color:var(--text-muted);line-height:1.8;margin-bottom:20px">${esc(d.summary)}</div>
+    <div style="font-size:14px;font-weight:700;margin-bottom:12px">📊 维度详情</div>`;
+
+  const icons=['📐','🔑','📋','📈','📧'];
+  (d.dimensions||[]).forEach((dim,i)=>{
+    const c=dim.score>=80?'var(--green)':dim.score>=60?'var(--orange)':'var(--red)';
+    html+=`<div class="ats-dim-card">
+      <div class="ats-dim-icon">${icons[i]||'📌'}</div>
+      <div class="ats-dim-info">
+        <div class="ats-dim-name">${esc(dim.name)}</div>
+        ${dim.issues.length?`<div class="ats-dim-issues">⚠️ ${dim.issues.map(esc).join(' · ')}</div>`:''}
+        ${dim.suggestions.length?`<div class="ats-dim-issues" style="color:var(--accent)">💡 ${dim.suggestions.map(esc).join(' · ')}</div>`:''}
+      </div>
+      <div class="ats-dim-score" style="color:${c}">${dim.score}</div>
+    </div>`;
+  });
+  html+=`</div>`;
+  el.innerHTML=html;
+}
+
+function closeFeatureModal(){document.getElementById('featureModal').classList.remove('show');document.body.style.overflow=''}
+
+function copyFeatureResult(elId){
+  const text=document.getElementById(elId).textContent;
+  navigator.clipboard.writeText(text).then(()=>showToast('已复制到剪贴板'));
+}
+
+// Theme toggle
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  const btn = document.getElementById('themeBtn');
+  if (btn) btn.textContent = theme === 'dark' ? '☀️' : '🌙';
+}
+function toggleTheme() {
+  const cur = document.documentElement.getAttribute('data-theme') || 'light';
+  const next = cur === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('theme', next);
+  applyTheme(next);
+}
+applyTheme(localStorage.getItem('theme') || 'light');
+</script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+
+# IDE
+.idea/
+.vscode/
+
+# Git
+.git/
+.gitignore
+
+# 系统文件
+*.md
+.env
+
+# Docker 自身
+docker-compose.yml
+Dockerfile
+.dockerignore
