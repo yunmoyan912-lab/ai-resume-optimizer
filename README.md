@@ -1,6 +1,26 @@
 # AI 简历优化器
 
-基于 FastAPI + 多模型 AI 的一站式简历分析与优化平台。支持 ATS 评分、岗位 JD 匹配、求职信生成、面试准备、技能差距分析、ATS 格式检查、批量处理、版本管理、团队协作、PDF/Word 导出等功能。
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white" alt="Python">
+  <img src="https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi&logoColor=white" alt="FastAPI">
+  <img src="https://img.shields.io/badge/MySQL-8.0-4479A1?logo=mysql&logoColor=white" alt="MySQL">
+  <img src="https://img.shields.io/badge/Deploy-Docker-2496ED?logo=docker&logoColor=white" alt="Docker">
+  <img src="https://img.shields.io/badge/License-MIT-yellow" alt="License">
+  <img src="https://img.shields.io/github/stars/yunmoyan912-lab/ai-resume-optimizer?style=social" alt="Stars">
+</p>
+
+> 🚀 基于 FastAPI + 多模型 AI 的一站式简历分析与优化平台:ATS 评分、JD 匹配、求职信生成、面试准备、团队协作、管理后台,全都要。
+
+✨ **亮点速览**
+
+| | |
+|---|---|
+| 🧠 **多模型自由切换** | DeepSeek / 通义千问 / Kimi / MiMo,自定义 API Key 即插即用 |
+| 📊 **ATS 专业评分** | 0-100 模拟筛选系统打分 + 5 维度 ATS 格式检查 |
+| 🎯 **JD 精准匹配** | 粘贴职位描述,AI 针对性优化并计算匹配度 |
+| 🔄 **批量 + 版本管理** | 一次多份简历异步处理、版本对比回滚 |
+| 👥 **团队协作** | 团队、成员、评论、审批全流程 |
+| 🛠 **自带管理后台** | 用户/简历/API Key 用量监控,亮暗主题 |
 
 ## 功能概览
 
@@ -104,7 +124,17 @@ ai-resume-optimizer/
 
 ## 快速开始
 
-### 环境要求
+### ⚡ 方式一:Docker 一键启动(推荐)
+
+```bash
+docker compose up -d --build
+```
+
+启动后访问 `http://localhost:8000`,默认管理员账号 `root` / `root`。
+
+### 🛠 方式二:本地手动运行
+
+#### 环境要求
 
 - Python 3.11+
 - MySQL 8.0+
